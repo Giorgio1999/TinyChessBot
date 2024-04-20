@@ -15,13 +15,18 @@ public class MyBot : IChessBot
     public Move Think(Board board, Timer timer)
     {
         Move[] moves = board.GetLegalMoves();
+        int[] scores = new int[moves.Length];
         for (int i = 0; i < maxDepth; i++)
         {
-            int[] scores = Search(moves, board, i);
+            scores = Search(moves, board, i);
             Array.Sort(scores,moves);
-            Array.Reverse(moves);
-            Console.WriteLine(scores[scores.Length-1]);
+            if (board.IsWhiteToMove)
+            {
+                Array.Reverse(moves);
+                Array.Reverse(scores);
+            }
         }
+        Console.WriteLine(scores[0]);
         return moves[0];
     }
 
@@ -33,13 +38,13 @@ public class MyBot : IChessBot
         for (int i = 0; i < moves.Length; i++)
         {
             board.MakeMove(moves[i]);
-            scores[i] = -RekursiveSearch(board, maxDepth, -alpha, -beta);
+            scores[i] = RekursiveSearch(board, maxDepth, alpha, beta,board.IsWhiteToMove);
             board.UndoMove(moves[i]);
         }
         return scores;
     }
 
-    int RekursiveSearch(Board board,int depth, int alpha, int beta)
+    int RekursiveSearch(Board board,int depth, int alpha, int beta, bool maximizingPlayer)
     {
         if (board.IsDraw())
         {
@@ -51,28 +56,37 @@ public class MyBot : IChessBot
         }
         Move[] moves = board.GetLegalMoves();
         int score = -10000000;
-        foreach (Move move in moves)
+        if (maximizingPlayer)
         {
-            board.MakeMove(move);
-            int newScore = -RekursiveSearch(board, depth-1, -alpha, -beta);
-            board.UndoMove(move);
-            score = newScore > score ? newScore : score;
-            if (board.IsWhiteToMove)
+            foreach (Move move in moves)
             {
+                board.MakeMove(move);
+                int newScore = RekursiveSearch(board, depth - 1, alpha, beta, false);
+                board.UndoMove(move);
+                score = newScore > score ? newScore : score;
                 alpha = alpha > newScore ? alpha : newScore;
                 if (beta <= alpha)
                 {
                     break;
                 }
             }
-            else
+        }
+        else
+        {
+            score *= -1;
+            foreach (Move move in moves)
             {
-                beta = beta > newScore ? beta : newScore;
-                if (beta >= alpha) 
+                board.MakeMove(move);
+                int newScore = RekursiveSearch(board, depth - 1, alpha, beta, true);
+                board.UndoMove(move);
+                score = newScore < score ? newScore : score;
+                beta = beta > newScore ? newScore : beta;
+                if (beta <= alpha)
                 {
                     break;
                 }
             }
+
         }
         return score;
     }
@@ -83,12 +97,12 @@ public class MyBot : IChessBot
         ulong opponentKingAttacks = BitboardHelper.GetKingAttacks(board.GetKingSquare(!board.IsWhiteToMove));
         for (int i = 1; i < 7; i++)
         {
-            PieceList myPieces = board.GetPieceList((PieceType)i, board.IsWhiteToMove);
-            PieceList opponentPieces = board.GetPieceList((PieceType)i, !board.IsWhiteToMove);
-            score += (myPieces.Count - opponentPieces.Count) * pieceValues[i-1];
-            foreach (Piece piece in myPieces)
+            PieceList whitePieces = board.GetPieceList((PieceType)i,true);
+            PieceList blackPieces = board.GetPieceList((PieceType)i, false);
+            score += (whitePieces.Count - blackPieces.Count) * pieceValues[i-1];
+            foreach (Piece piece in whitePieces)
             {
-                score += mobilityBoni[i-1] * BitboardHelper.GetNumberOfSetBits(BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, board.IsWhiteToMove));
+                //score += mobilityBoni[i-1] * BitboardHelper.GetNumberOfSetBits(BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, board.IsWhiteToMove));
                 //score -= mobilityBoni[i] * BitboardHelper.GetNumberOfSetBits(BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, !board.IsWhiteToMove));
                 //score += kingKillBoni * BitboardHelper.GetNumberOfSetBits(opponentKingAttacks & BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, board.IsWhiteToMove)); 
             }
