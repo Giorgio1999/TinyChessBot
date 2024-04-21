@@ -8,15 +8,15 @@ using System.Linq;
 public class EvilBot : IChessBot
 {
     int[] pieceValues = { 100, 300, 350, 500, 900, 0 };
-    int[] mobilityBoni = { 0, 10, 10, 10, 10, -50 };
-    int kingKillBoni = 20;
-    int maxDepth = 4;
+    int[] mobilityBoni = { 0, 20, 20, 20, 20, -50 };
+    int kingKillBoni = 1;
+    int maxDepth = 5;
     int maxCaptureDepth = 3;
     public Move Think(Board board, Timer timer)
     {
         Move[] moves = board.GetLegalMoves();
         int[] scores = new int[moves.Length];
-        for (int i = 0; i < maxDepth; i++)
+        for (int i = 1; i < maxDepth; i++)
         {
             scores = Search(moves, board, i);
             Array.Sort(scores, moves);
@@ -38,7 +38,7 @@ public class EvilBot : IChessBot
         for (int i = 0; i < moves.Length; i++)
         {
             board.MakeMove(moves[i]);
-            scores[i] = RekursiveSearch(board, maxDepth, alpha, beta, board.IsWhiteToMove);
+            scores[i] = RekursiveSearch(board, maxDepth-1, alpha, beta, board.IsWhiteToMove);
             board.UndoMove(moves[i]);
         }
         return scores;
@@ -94,7 +94,8 @@ public class EvilBot : IChessBot
     int Evaluate(Board board)
     {
         int score = 0;
-        ulong opponentKingAttacks = BitboardHelper.GetKingAttacks(board.GetKingSquare(!board.IsWhiteToMove));
+        ulong whiteKingAttacks = BitboardHelper.GetKingAttacks(board.GetKingSquare(true));
+        ulong blackKingAttacks = BitboardHelper.GetKingAttacks(board.GetKingSquare(false));
         for (int i = 1; i < 7; i++)
         {
             PieceList whitePieces = board.GetPieceList((PieceType)i, true);
@@ -102,9 +103,18 @@ public class EvilBot : IChessBot
             score += (whitePieces.Count - blackPieces.Count) * pieceValues[i - 1];
             foreach (Piece piece in whitePieces)
             {
-                score += mobilityBoni[i - 1] * BitboardHelper.GetNumberOfSetBits(BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, true) & ~board.WhitePiecesBitboard);
-                score -= mobilityBoni[i - 1] * BitboardHelper.GetNumberOfSetBits(BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, false) & ~board.BlackPiecesBitboard);
-                //score += kingKillBoni * BitboardHelper.GetNumberOfSetBits(opponentKingAttacks & BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, board.IsWhiteToMove)); 
+                score +=
+                        //White pieces mobility = number of pieces attacked by given piecetype which are not blocked by white pieces, multiplied by mobilityboni 
+                        mobilityBoni[i - 1] * BitboardHelper.GetNumberOfSetBits(BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, true) & ~board.WhitePiecesBitboard)
+                        //Black pieces mobility
+                        - mobilityBoni[i - 1] * BitboardHelper.GetNumberOfSetBits(BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, false) & ~board.BlackPiecesBitboard)
+                        //Black King unsafety = number of squares the black king can move to which are also attacked by white pieces of the given piece type and not occupied by black pieces
+                        + kingKillBoni * BitboardHelper.GetNumberOfSetBits(blackKingAttacks & BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, true) & ~board.BlackPiecesBitboard)     
+                        //White King unsafety
+                        - kingKillBoni * BitboardHelper.GetNumberOfSetBits(whiteKingAttacks & BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, false) & ~board.WhitePiecesBitboard)
+                        //First move advantage to help with draws
+//                      + 1
+                        ;
             }
         }
         //score += mobilityBoni[5] * BitboardHelper.GetNumberOfSetBits(BitboardHelper.GetPieceAttacks(PieceType.Queen, board.GetKingSquare(board.IsWhiteToMove),board,board.IsWhiteToMove));
