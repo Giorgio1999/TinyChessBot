@@ -12,6 +12,7 @@ public class MyBot : IChessBot
     int kingKillBoni = 1;
     int maxDepth = 5;
     int maxCaptureDepth = 3;
+    int epsilon = 10;
     public Move Think(Board board, Timer timer)
     {
         Move[] moves = board.GetLegalMoves();
@@ -26,6 +27,15 @@ public class MyBot : IChessBot
             {
                 Array.Reverse(moves);
                 Array.Reverse(scores);
+            }
+        }
+        //Return random move if score is not too bad to account for faulty evaluation and mess with enemy pruning
+        if (moves.Length >= 2)
+        {
+            if (System.MathF.Abs(scores[0] - scores[1]) <= epsilon)
+            {
+                Random rng = new Random(moves.Length);
+                return moves[rng.Next(2)];
             }
         }
         Console.WriteLine(scores[0]);
@@ -51,7 +61,7 @@ public class MyBot : IChessBot
     int RekursiveSearch(Board board,int depth, int alpha, int beta, bool maximizingPlayer)
     {
         //Check for draws...might needs improvement
-        if (board.IsDraw())
+        if (board.IsRepeatedPosition()||board.IsFiftyMoveDraw()||board.IsInStalemate())
         {
             return 0;
         }
@@ -61,6 +71,8 @@ public class MyBot : IChessBot
             return Evaluate(board);
         }
         Move[] moves = board.GetLegalMoves();
+        //Check extension
+        if (board.IsInCheck()) { depth++; };
         int score = -10000000;
         //not very elegant difference in function depending on which person is evaluating
         if (maximizingPlayer)
