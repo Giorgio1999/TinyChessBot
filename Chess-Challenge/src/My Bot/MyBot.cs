@@ -16,10 +16,12 @@ public class MyBot : IChessBot
     {
         Move[] moves = board.GetLegalMoves();
         int[] scores = new int[moves.Length];
+        //Iterative deepening loop
         for (int i = 1; i < maxDepth; i++)
         {
             scores = Search(moves, board, i);
             Array.Sort(scores,moves);
+            //Always sort in acsending order, therefore best move is last or first move depending on color
             if (board.IsWhiteToMove)
             {
                 Array.Reverse(moves);
@@ -30,6 +32,7 @@ public class MyBot : IChessBot
         return moves[0];
     }
 
+    //Search function for a single iteration of iterative deepening loop
     int[] Search(Move[] moves, Board board, int maxDepth)
     {
         int[] scores = new int[moves.Length];
@@ -44,18 +47,22 @@ public class MyBot : IChessBot
         return scores;
     }
 
+    //Rekursive search with alphe, beta pruning
     int RekursiveSearch(Board board,int depth, int alpha, int beta, bool maximizingPlayer)
     {
+        //Check for draws...might needs improvement
         if (board.IsDraw())
         {
             return 0;
         }
+        //Static eval if depth==0
         if (depth == 0)
         {
             return Evaluate(board);
         }
         Move[] moves = board.GetLegalMoves();
         int score = -10000000;
+        //not very elegant difference in function depending on which person is evaluating
         if (maximizingPlayer)
         {
             foreach (Move move in moves)
@@ -91,6 +98,7 @@ public class MyBot : IChessBot
         return score;
     }
 
+    //Static evaluation function
     int Evaluate(Board board)
     {
         int score = 0;
