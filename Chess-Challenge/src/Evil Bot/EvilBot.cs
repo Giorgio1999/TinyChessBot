@@ -10,11 +10,13 @@ public class EvilBot : IChessBot
     int[] pieceValues = { 100, 300, 350, 500, 900, 0 };
     int[] mobilityBoni = { 0, 20, 20, 20, 20, -50 };
     int kingKillBoni = 1;
-    int maxDepth = 5;
+    int maxDepth = 21;
     int maxCaptureDepth = 3;
     int epsilon = 10;
     public Move Think(Board board, Timer timer)
     {
+        //Calculate allowed time per think based on remainingtime
+        float maxTimePerMove = (timer.MillisecondsRemaining + timer.IncrementMilliseconds) / 500;
         Move[] moves = board.GetLegalMoves();
         int[] scores = new int[moves.Length];
         //Iterative deepening loop
@@ -27,6 +29,11 @@ public class EvilBot : IChessBot
             {
                 Array.Reverse(moves);
                 Array.Reverse(scores);
+            }
+            //If elapsed time larger than allowed time break out of search
+            if (timer.MillisecondsElapsedThisTurn > maxTimePerMove)
+            {
+                break;
             }
         }
         //Return random move if score is not too bad to account for faulty evaluation and mess with enemy pruning
