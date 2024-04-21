@@ -8,7 +8,7 @@ using System.Linq;
 public class MyBot : IChessBot
 {
     int[] pieceValues = { 100, 300, 350, 500, 900, 0 };
-    int[] mobilityBoni = { 0, 1, 1, 1, 1, -50 };
+    int[] mobilityBoni = { 0, 20, 20, 20, 20, -50 };
     int kingKillBoni = 20;
     int maxDepth = 4;
     int maxCaptureDepth = 3;
@@ -102,8 +102,8 @@ public class MyBot : IChessBot
             score += (whitePieces.Count - blackPieces.Count) * pieceValues[i-1];
             foreach (Piece piece in whitePieces)
             {
-                //score += mobilityBoni[i-1] * BitboardHelper.GetNumberOfSetBits(BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, board.IsWhiteToMove));
-                //score -= mobilityBoni[i] * BitboardHelper.GetNumberOfSetBits(BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, !board.IsWhiteToMove));
+                score += mobilityBoni[i-1] * BitboardHelper.GetNumberOfSetBits(BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, true)&~board.WhitePiecesBitboard);
+                score -= mobilityBoni[i-1] * BitboardHelper.GetNumberOfSetBits(BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, false)&~board.BlackPiecesBitboard);
                 //score += kingKillBoni * BitboardHelper.GetNumberOfSetBits(opponentKingAttacks & BitboardHelper.GetPieceAttacks((PieceType)i, piece.Square, board, board.IsWhiteToMove)); 
             }
         }
